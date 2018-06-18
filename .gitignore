@@ -60,3 +60,6 @@
 
 # IDE Project files
 /.idea
+
+# Mac OS generated files
+.DS_Store
