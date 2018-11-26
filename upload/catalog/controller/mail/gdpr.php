@@ -1,10 +1,10 @@
 <?php
 class ControllerMailGdpr extends Controller {
 	// catalog/model/customer/gdpr/addGdpr
-	public function index(&$route, &$args, &$output) {
+	public function confirm(&$route, &$args, &$output) {
 		$this->load->model('account/customer');
 
-		$customer_info = $this->model_account_customer->getCustomer($args[0]);
+		$customer_info = $this->model_account_customer->getCustomerByEmail($args[0]);
 
 		if ($customer_info) {
 			$this->load->language('mail/gdpr');
@@ -16,8 +16,8 @@ class ControllerMailGdpr extends Controller {
 			}
 
 			$data['text_hello'] = sprintf($this->language->get('text_hello'), html_entity_decode($customer_info['firstname'], ENT_QUOTES, 'UTF-8'));
-			$data['text_greeting'] = sprintf($this->language->get('text_greeting'), html_entity_decode($this->config->get('config_name'), ENT_QUOTES, 'UTF-8'));
-			$data['text_delete'] = sprintf($this->language->get('text_delete'), $this->config->get('config_gdpr_limit'));
+
+			$data['confirm'] = $this->url->link('information/gdpr/success', 'language=' . $this->config->get('config_language'));
 
 			$data['ip'] = $this->request->server['REMOTE_ADDR'];
 

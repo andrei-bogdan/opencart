@@ -1,225 +1,144 @@
 <?php
 class ControllerInformationGdpr extends Controller {
 	public function index() {
-		$this->load->language('information/gdpr');
+		$this->load->model('catalog/information');
 
-		$this->document->setTitle($this->language->get('heading_title'));
+		$information_info = $this->model_catalog_information->getInformation($this->config->get('config_gdpr_id'));
 
-		$data['breadcrumbs'] = array();
+		if ($information_info) {
+			$this->load->language('information/gdpr');
 
-		$data['breadcrumbs'][] = array(
-			'text' => $this->language->get('text_home'),
-			'href' => $this->url->link('common/home', 'language=' . $this->config->get('config_language'))
-		);
+			$this->document->setTitle($this->language->get('heading_title'));
 
-		$data['breadcrumbs'][] = array(
-			'text' => $this->language->get('text_account'),
-			'href' => $this->url->link('account/account', 'language=' . $this->config->get('config_language'))
-		);
+			$data['breadcrumbs'] = array();
 
-		$data['breadcrumbs'][] = array(
-			'text' => $this->language->get('heading_title'),
-			'href' => $this->url->link('information/gdpr', 'language=' . $this->config->get('config_language'))
-		);
+			$data['breadcrumbs'][] = array(
+				'text' => $this->language->get('text_home'),
+				'href' => $this->url->link('common/home', 'language=' . $this->config->get('config_language'))
+			);
 
-		$data['email'] = $this->customer->getEmail();
-		$data['store'] = $this->config->get('config_name');
-		$data['limit'] = $this->config->get('config_gdpr_limit');
+			$data['breadcrumbs'][] = array(
+				'text' => $this->language->get('text_account'),
+				'href' => $this->url->link('account/account', 'language=' . $this->config->get('config_language'))
+			);
 
-		$data['cancel'] = $this->url->link('account/account', 'language=' . $this->config->get('config_language'));
+			$data['breadcrumbs'][] = array(
+				'text' => $this->language->get('heading_title'),
+				'href' => $this->url->link('information/gdpr', 'language=' . $this->config->get('config_language'))
+			);
 
-		$data['column_left'] = $this->load->controller('common/column_left');
-		$data['column_right'] = $this->load->controller('common/column_right');
-		$data['content_top'] = $this->load->controller('common/content_top');
-		$data['content_bottom'] = $this->load->controller('common/content_bottom');
-		$data['footer'] = $this->load->controller('common/footer');
-		$data['header'] = $this->load->controller('common/header');
+			$data['title'] = $information_info['title'];
 
-		$this->response->setOutput($this->load->view('information/gdpr', $data));
+			$data['gdpr'] = $this->url->link('information/information', 'language=' . $this->config->get('config_language') . '&information_id=' . $information_info['information_id']);
+
+			$data['email'] = $this->customer->getEmail();
+			$data['store'] = $this->config->get('config_name');
+			$data['limit'] = $this->config->get('config_gdpr_limit');
+
+			$data['cancel'] = $this->url->link('account/account', 'language=' . $this->config->get('config_language'));
+
+			$data['column_left'] = $this->load->controller('common/column_left');
+			$data['column_right'] = $this->load->controller('common/column_right');
+			$data['content_top'] = $this->load->controller('common/content_top');
+			$data['content_bottom'] = $this->load->controller('common/content_bottom');
+			$data['footer'] = $this->load->controller('common/footer');
+			$data['header'] = $this->load->controller('common/header');
+
+			$this->response->setOutput($this->load->view('information/gdpr', $data));
+		} else {
+			return new Action('error/not_found');
+		}
 	}
 
+	public function action() {
+		$this->load->language('information/gdpr');
 
-	public function export() {
 		$json = array();
+
+		if (isset($this->request->post['email'])) {
+			$email = $this->request->post['email'];
+		} else {
+			$email = '';
+		}
+
+		if (isset($this->request->post['action'])) {
+			$action = $this->request->post['action'];
+		} else {
+			$action = '';
+		}
+
+		// Validate E-Mail
+		if ((utf8_strlen($email) > 96) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+			$json['error']['email'] = $this->language->get('error_email');
+		}
+
+		// Validate Action
+		$allowed = array(
+			'export',
+			'remove'
+		);
+
+		if (!in_array($action, $allowed)) {
+			$json['error']['action'] = $this->language->get('error_action');
+		}
+
+		if (!$json) {
+			$this->load->model('account/gdpr');
+
+			$this->model_account_gdpr->addGdpr(token(), $email, $action);
+
+			$json['success'] = $this->language->get('text_success');
+		}
 
 		$this->response->addHeader('Content-Type: application/json');
 		$this->response->setOutput(json_encode($json));
 	}
 
-
-
-
-	public function delete() {
-
-
-
-		$this->load->language('account/gdpr_delete');
-
-		$this->document->setTitle($this->language->get('heading_title'));
-
-		$data['breadcrumbs'] = array();
-
-		$data['breadcrumbs'][] = array(
-			'text' => $this->language->get('text_home'),
-			'href' => $this->url->link('common/home', 'language=' . $this->config->get('config_language'))
-		);
-
-		$data['breadcrumbs'][] = array(
-			'text' => $this->language->get('text_account'),
-			'href' => $this->url->link('account/account', 'language=' . $this->config->get('config_language'))
-		);
-
-		$data['breadcrumbs'][] = array(
-			'text' => $this->language->get('heading_title'),
-			'href' => $this->url->link('account/gdpr/delete', 'language=' . $this->config->get('config_language'))
-		);
-
-		$data['text_confirm'] = sprintf($this->language->get('text_confirm'), $this->config->get('config_gdpr_limit'));
-
-		$data['delete'] = $this->url->link('account/gdpr/success', 'language=' . $this->config->get('config_language'));
-
-
-		$data['confirm'] = $this->url->link('account/account', 'language=' . $this->config->get('config_language'));
-
-		$data['column_left'] = $this->load->controller('common/column_left');
-		$data['column_right'] = $this->load->controller('common/column_right');
-		$data['content_top'] = $this->load->controller('common/content_top');
-		$data['content_bottom'] = $this->load->controller('common/content_bottom');
-		$data['footer'] = $this->load->controller('common/footer');
-		$data['header'] = $this->load->controller('common/header');
-
-		$this->response->setOutput($this->load->view('account/gdpr_delete', $data));
-	}
-
 	public function success() {
-		if (!$this->customer->isLogged()) {
-			$this->session->data['redirect'] = $this->url->link('account/gdpr/delete', 'language=' . $this->config->get('config_language'));
-
-			$this->response->redirect($this->url->link('account/login', 'language=' . $this->config->get('config_language')));
+		if (isset($this->request->post['code'])) {
+			$code = $this->request->post['code'];
+		} else {
+			$code = '';
 		}
 
 		$this->load->model('account/gdpr');
 
-		$gdpr_info = $this->model_account_gdpr->getGdpr($this->customer->getId());
+		$gdpr_info = $this->model_account_gdpr->getGdprByCode($code);
 
-		if (!$gdpr_info) {
-			$this->model_account_gdpr->addGdpr($this->customer->getId());
-		}
+		if ($gdpr_info) {
+			$this->load->language('account/gdpr_success');
 
-		$this->load->language('account/gdpr_success');
+			$this->document->setTitle($this->language->get('heading_title'));
 
-		$this->document->setTitle($this->language->get('heading_title'));
+			$data['breadcrumbs'] = array();
 
-		$data['breadcrumbs'] = array();
-
-		$data['breadcrumbs'][] = array(
-			'text' => $this->language->get('text_home'),
-			'href' => $this->url->link('common/home', 'language=' . $this->config->get('config_language'))
-		);
-
-		$data['breadcrumbs'][] = array(
-			'text' => $this->language->get('text_account'),
-			'href' => $this->url->link('account/account', 'language=' . $this->config->get('config_language'))
-		);
-
-		$data['breadcrumbs'][] = array(
-			'text' => $this->language->get('heading_title'),
-			'href' => $this->url->link('account/gdpr/delete', 'language=' . $this->config->get('config_language'))
-		);
-
-
-		$data['column_left'] = $this->load->controller('common/column_left');
-		$data['column_right'] = $this->load->controller('common/column_right');
-		$data['content_top'] = $this->load->controller('common/content_top');
-		$data['content_bottom'] = $this->load->controller('common/content_bottom');
-		$data['footer'] = $this->load->controller('common/footer');
-		$data['header'] = $this->load->controller('common/header');
-
-		$this->response->setOutput($this->load->view('account/gdpr_success', $data));
-	}
-
-
-	public function mail() {
-		$data['firstname'] = $this->customer->getFirstname();
-		$data['lastname'] = $this->customer->getFirstname();
-		$data['email'] = $this->customer->getEmail();
-		$data['telephone'] = $this->customer->getTelephone();
-
-		// Addresses
-		$data['addresses'] = array();
-
-		$this->load->model('account/address');
-
-		$results = $this->model_account_address->getAddresses($this->customer->getId());
-
-		foreach ($results as $result) {
-			$address = array(
-				'firstname' => $result['firstname'],
-				'lastname' => $result['lastname'],
-				'address_1' => $result['address_1'],
-				'address_2' => $result['address_2'],
-				'city' => $result['city'],
-				'postcode' => $result['postcode'],
-				'country' => $result['country'],
-				'zone' => $result['zone']
+			$data['breadcrumbs'][] = array(
+				'text' => $this->language->get('text_home'),
+				'href' => $this->url->link('common/home', 'language=' . $this->config->get('config_language'))
 			);
 
-			if (!in_array($address, $data['addresses'])) {
-				$data['addresses'][] = $address;
-			}
-		}
-
-		// Order Addresses
-		$this->load->model('account/order');
-
-		$results = $this->model_account_order->getOrders($this->customer->getId());
-
-		foreach ($results as $result) {
-			$address = array(
-				'firstaname' => $result['payment_firstaname'],
-				'lastname' => $result['payment_lastname'],
-				'address_1' => $result['payment_address_1'],
-				'address_2' => $result['payment_address_2'],
-				'city' => $result['payment_city'],
-				'postcode' => $result['payment_postcode'],
-				'country' => $result['payment_country'],
-				'zone' => $result['payment_zone']
+			$data['breadcrumbs'][] = array(
+				'text' => $this->language->get('text_account'),
+				'href' => $this->url->link('account/account', 'language=' . $this->config->get('config_language'))
 			);
 
-			if (!in_array($address, $data['addresses'])) {
-				$data['addresses'][] = $address;
-			}
-
-			$address = array(
-				'firstname' => $result['shipping_firstname'],
-				'lastname' => $result['shipping_lastname'],
-				'address_1' => $result['shipping_address_1'],
-				'address_2' => $result['shipping_address_2'],
-				'city' => $result['shipping_city'],
-				'postcode' => $result['shipping_postcode'],
-				'country' => $result['shipping_country'],
-				'zone' => $result['shipping_zone']
+			$data['breadcrumbs'][] = array(
+				'text' => $this->language->get('heading_title'),
+				'href' => $this->url->link('account/gdpr/delete', 'language=' . $this->config->get('config_language'))
 			);
 
-			if (!in_array($address, $data['addresses'])) {
-				$data['addresses'][] = $address;
-			}
+			$this->model_account_gdpr->editGdpr($code);
+
+			$data['column_left'] = $this->load->controller('common/column_left');
+			$data['column_right'] = $this->load->controller('common/column_right');
+			$data['content_top'] = $this->load->controller('common/content_top');
+			$data['content_bottom'] = $this->load->controller('common/content_bottom');
+			$data['footer'] = $this->load->controller('common/footer');
+			$data['header'] = $this->load->controller('common/header');
+
+			$this->response->setOutput($this->load->view('account/gdpr_success', $data));
+		} else {
+			return new Action('error/not_found');
 		}
-
-		// Ip's
-		$data['ips'] = array();
-
-		$this->load->model('account/customer');
-
-		$results = $this->model_account_customer->getIps($this->customer->getId());
-
-		foreach ($results as $result) {
-			$data['ips'][] = array(
-				'ip' => $result['ip'],
-				'country' => $result['country'],
-				'date_added' => date($this->language->get('datetime_format'), strtotime($result['date_added']))
-			);
-		}
-
 	}
 }
